@@ -16,14 +16,15 @@ class Settings(BaseSettings):
     # Model Configuration
     SMALL_MODEL: str = "gpt-4o-mini"  # Fast, cost-effective
     MEDIUM_MODEL: str = "gpt-4o"  # Balanced
-    LARGE_MODEL: str = "claude-3-5-sonnet-20241022"  # Most capable
+    # the newest Anthropic model is "claude-sonnet-4-20250514" which was released in 2025
+    LARGE_MODEL: str = "claude-sonnet-4-20250514"  # Most capable
     
     # App Settings
     APP_NAME: str = "AI Assistant"
     DEBUG: bool = True
     
-    # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:5000,http://0.0.0.0:5000"
+    # CORS - allow all Replit domains
+    ALLOWED_ORIGINS: str = "*"
     
     @property
     def allowed_origins_list(self) -> list[str]:
