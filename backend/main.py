@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.database import Base, engine
-from backend.routers import tasks, preferences, chat, settings as settings_router
+from backend.routers import tasks, preferences, chat, settings as settings_router, activity
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -28,6 +28,7 @@ app.include_router(tasks.router)
 app.include_router(preferences.router)
 app.include_router(chat.router)
 app.include_router(settings_router.router)
+app.include_router(activity.router)
 
 
 @app.get("/")

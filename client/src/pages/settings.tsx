@@ -1,13 +1,22 @@
 import { useState } from "react";
 import { IntegrationCard } from "@/components/integration-card";
+import { AIToolCard } from "@/components/ai-tool-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings as SettingsIcon, Mail, MessageCircle, Calendar, AlertTriangle } from "lucide-react";
+import { 
+  Settings as SettingsIcon, 
+  Mail, 
+  MessageCircle, 
+  Calendar, 
+  AlertTriangle,
+  Globe,
+  Code,
+  Smartphone
+} from "lucide-react";
 
 export default function Settings() {
-  // todo: remove mock functionality
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
   const [calendarEnabled, setCalendarEnabled] = useState(false);
@@ -36,6 +45,37 @@ export default function Settings() {
       enabled: calendarEnabled,
       onToggle: setCalendarEnabled,
       testId: "switch-integration-calendar",
+    },
+  ];
+
+  const aiTools = [
+    {
+      icon: Globe,
+      name: "Web Search",
+      description: "Enable AI to search the web for real-time information",
+      status: "coming_soon" as const,
+      testId: "card-tool-web-search",
+    },
+    {
+      icon: Mail,
+      name: "Gmail Integration",
+      description: "Let AI read and compose emails on your behalf",
+      status: "coming_soon" as const,
+      testId: "card-tool-gmail",
+    },
+    {
+      icon: Smartphone,
+      name: "WhatsApp Automation",
+      description: "Send messages and manage WhatsApp conversations",
+      status: "coming_soon" as const,
+      testId: "card-tool-whatsapp-auto",
+    },
+    {
+      icon: Code,
+      name: "Playwright Automation",
+      description: "Automate browser tasks and web scraping",
+      status: "coming_soon" as const,
+      testId: "card-tool-playwright",
     },
   ];
 
@@ -84,6 +124,18 @@ export default function Settings() {
           {integrations.map((integration) => (
             <IntegrationCard key={integration.name} {...integration} />
           ))}
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="text-xl font-semibold">AI Tools & Capabilities</h2>
+          <p className="text-sm text-muted-foreground">
+            Advanced tools that will be available to your AI assistant
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {aiTools.map((tool) => (
+              <AIToolCard key={tool.name} {...tool} />
+            ))}
+          </div>
         </div>
 
         <Card className="border-destructive/50 bg-destructive/5">

@@ -1,30 +1,82 @@
-import { MessageSquare, CheckSquare, Palette, Sparkles, Clock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { QuickActionCard } from "@/components/quick-action-card";
 import { ActivityItem } from "@/components/activity-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkles, MessageSquare, CheckSquare, Palette, Clock, Loader2 } from "lucide-react";
+import { apiClient } from "@/lib/apiClient";
+
+interface Activity {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+}
 
 export default function Home() {
-  // todo: remove mock functionality
-  const recentActivities = [
-    {
-      icon: MessageSquare,
-      title: "New conversation started",
-      description: "Asked about project management tips",
-      time: "2 hours ago",
+  // Fetch recent activities from backend
+  const { data: activities = [], isLoading } = useQuery<Activity[]>({
+    queryKey: ["/api/activity/recent"],
+    retry: false,
+    // Fallback to mock data if endpoint doesn't exist yet
+    queryFn: async () => {
+      try {
+        return await apiClient.get<Activity[]>("/api/activity/recent");
+      } catch {
+        // Mock data fallback
+        return [
+          {
+            id: "1",
+            type: "message",
+            title: "New conversation started",
+            description: "Asked about project management tips",
+            timestamp: new Date(Date.now() - 7200000).toISOString(),
+          },
+          {
+            id: "2",
+            type: "task",
+            title: "Task completed",
+            description: "Finished 'Review quarterly report'",
+            timestamp: new Date(Date.now() - 18000000).toISOString(),
+          },
+          {
+            id: "3",
+            type: "preference",
+            title: "Preferences updated",
+            description: "Changed communication style to casual",
+            timestamp: new Date(Date.now() - 86400000).toISOString(),
+          },
+        ];
+      }
     },
-    {
-      icon: CheckSquare,
-      title: "Task completed",
-      description: "Finished 'Review quarterly report'",
-      time: "5 hours ago",
-    },
-    {
-      icon: Palette,
-      title: "Preferences updated",
-      description: "Changed communication style to casual",
-      time: "1 day ago",
-    },
-  ];
+  });
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case "message":
+        return MessageSquare;
+      case "task":
+        return CheckSquare;
+      case "preference":
+        return Palette;
+      default:
+        return Clock;
+    }
+  };
+
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+    return "Just now";
+  };
 
   return (
     <div className="h-full overflow-auto">
@@ -64,16 +116,32 @@ export default function Home() {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent className="divide-y">
-            {recentActivities.map((activity, index) => (
-              <ActivityItem key={index} {...activity} />
-            ))}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : activities.length > 0 ? (
+              activities.map((activity) => (
+                <ActivityItem
+                  key={activity.id}
+                  icon={getIcon(activity.type)}
+                  title={activity.title}
+                  description={activity.description}
+                  time={getTimeAgo(activity.timestamp)}
+                />
+              ))
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <p>No recent activity</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

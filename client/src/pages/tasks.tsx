@@ -1,45 +1,106 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TaskCard } from "@/components/task-card";
 import { TaskDialog } from "@/components/task-dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ListTodo } from "lucide-react";
+import { Plus, ListTodo, Loader2 } from "lucide-react";
+import { apiClient } from "@/lib/apiClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  created_at?: string;
+}
 
 export default function Tasks() {
-  // todo: remove mock functionality
-  const [tasks, setTasks] = useState([
-    {
-      id: "1",
-      title: "Review quarterly report",
-      description: "Go through Q4 metrics and prepare summary",
-      completed: false,
-    },
-    {
-      id: "2",
-      title: "Schedule team meeting",
-      description: "Coordinate with team for weekly sync",
-      completed: false,
-    },
-    {
-      id: "3",
-      title: "Update project documentation",
-      description: "",
-      completed: true,
-    },
-  ]);
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
-  const [editingTask, setEditingTask] = useState<typeof tasks[0] | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Fetch tasks
+  const { data: tasks = [], isLoading } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+  });
+
+  // Create task mutation
+  const createMutation = useMutation({
+    mutationFn: (taskData: { title: string; description: string }) =>
+      apiClient.post<Task>("/api/tasks/", taskData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task created successfully",
+      });
+      setDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update task mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Task> }) =>
+      apiClient.put<Task>(`/api/tasks/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+      setDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete task mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/api/tasks/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete task",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleToggle = (id: string) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+    const task = tasks.find((t) => t.id === id);
+    if (task) {
+      updateMutation.mutate({
+        id,
+        data: { completed: !task.completed },
+      });
+    }
   };
 
   const handleEdit = (id: string) => {
-    const task = tasks.find(t => t.id === id);
+    const task = tasks.find((t) => t.id === id);
     if (task) {
       setEditingTask(task);
       setDialogMode("edit");
@@ -48,21 +109,17 @@ export default function Tasks() {
   };
 
   const handleDelete = (id: string) => {
-    setTasks(tasks.filter(task => task.id !== id));
+    deleteMutation.mutate(id);
   };
 
   const handleSave = (taskData: { title: string; description: string }) => {
     if (dialogMode === "create") {
-      const newTask = {
-        id: Date.now().toString(),
-        ...taskData,
-        completed: false,
-      };
-      setTasks([...tasks, newTask]);
+      createMutation.mutate(taskData);
     } else if (editingTask) {
-      setTasks(tasks.map(task =>
-        task.id === editingTask.id ? { ...task, ...taskData } : task
-      ));
+      updateMutation.mutate({
+        id: editingTask.id,
+        data: taskData,
+      });
     }
     setEditingTask(null);
   };
@@ -73,8 +130,16 @@ export default function Tasks() {
     setDialogOpen(true);
   };
 
-  const activeTasks = tasks.filter(t => !t.completed);
-  const completedTasks = tasks.filter(t => t.completed);
+  const activeTasks = tasks.filter((t) => !t.completed);
+  const completedTasks = tasks.filter((t) => t.completed);
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-auto">
@@ -109,7 +174,7 @@ export default function Tasks() {
                 <p>No tasks yet. Create one to get started!</p>
               </div>
             ) : (
-              tasks.map(task => (
+              tasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   {...task}
@@ -124,10 +189,10 @@ export default function Tasks() {
           <TabsContent value="active" className="space-y-3 mt-6">
             {activeTasks.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p>No active tasks</p>
+                <p>No active tasks. Great job!</p>
               </div>
             ) : (
-              activeTasks.map(task => (
+              activeTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   {...task}
@@ -142,10 +207,10 @@ export default function Tasks() {
           <TabsContent value="completed" className="space-y-3 mt-6">
             {completedTasks.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p>No completed tasks</p>
+                <p>No completed tasks yet.</p>
               </div>
             ) : (
-              completedTasks.map(task => (
+              completedTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   {...task}
@@ -160,9 +225,16 @@ export default function Tasks() {
 
         <TaskDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEditingTask(null);
+          }}
           onSave={handleSave}
-          initialData={editingTask ? { title: editingTask.title, description: editingTask.description || "" } : undefined}
+          initialData={
+            editingTask
+              ? { title: editingTask.title, description: editingTask.description || "" }
+              : undefined
+          }
           mode={dialogMode}
         />
       </div>
