@@ -23,7 +23,12 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # CORS
-    ALLOWED_ORIGINS: list = ["http://localhost:5000", "http://0.0.0.0:5000"]
+    ALLOWED_ORIGINS: str = "http://localhost:5000,http://0.0.0.0:5000"
+    
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """Parse ALLOWED_ORIGINS string into list"""
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
     
     # STM/LTM Configuration
     STM_CONVERSATION_LIMIT: int = 5  # Keep last 5 conversations in short-term memory
